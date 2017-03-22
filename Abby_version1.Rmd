@@ -1,0 +1,75 @@
+---
+title: "TEST"
+output: html_document
+---
+
+
+```{r, message=FALSE, error=FALSE}
+require(dplyr)
+require(ggplot2)
+require(tidyverse)
+require(lubridate)
+
+load("~/house_elections.rda")
+load("~/candidates.rda")
+load("~/committees.rda")
+load("~/contributions.rda")
+```
+
+
+
+```{r}
+# glimpse(contributions)
+
+my_contributions <- contributions %>%
+  mutate(trans_date = mdy(transaction_dt)) %>%
+  mutate(trans_date = year(trans_date)) %>%
+  select(-transaction_dt)
+  
+glimpse(my_contributions)
+```
+
+
+```{r}
+max_avg <- my_contributions %>%
+  group_by(state, entity_type, trans_date) %>%
+  summarize(sum_per_type = sum(transaction_amt))
+
+max_avg
+```
+
+
+```{r}
+highest_avg_per_type <- my_contributions %>%
+  group_by(state, entity_type, trans_date) %>%
+  summarize(sum_per = n(),
+         sum_trans = sum(transaction_amt)) %>%
+  mutate(avg_trans = (sum_trans / sum_per)) %>%
+  group_by(entity_type, trans_date) %>%
+  mutate(max_avg = max(avg_trans)) %>%
+  filter(avg_trans == max_avg) %>%
+  select(state, entity_type, avg_trans, trans_date)
+```
+
+
+```{r}
+
+years_4plots <- c("2011", "2012", "2010", "NA", "2001", "2008", "2009", "2013", "2014", "2007")
+
+
+plots <- list()
+
+highest_avg_per_yr <- function(year_filter) {
+  data <- highest_avg_per_type %>%   # filter by each year, successively
+    filter(trans_date == year_filter) 
+  
+  plot_try <- ggplot(data, aes(x=entity_type, y=avg_trans)) + 
+    geom_point(aes(color=state)) +
+    ggtitle(year_filter)
+  
+}
+
+lapply(years_4plots, FUN = highest_avg_per_yr)
+
+
+```

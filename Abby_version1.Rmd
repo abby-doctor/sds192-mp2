@@ -26,7 +26,7 @@ my_contributions <- contributions %>%
   mutate(trans_date = year(trans_date)) %>%
   select(-transaction_dt)
   
-glimpse(my_contributions)
+my_contributions
 ```
 
 
@@ -53,19 +53,22 @@ highest_avg_per_type <- my_contributions %>%
 
 
 ```{r}
+is.na(highest_avg_per_type$trans_date)
 
-years_4plots <- c("2011", "2012", "2010", "NA", "2001", "2008", "2009", "2013", "2014", "2007")
 
-
-plots <- list()
+years_4plots <- c("2010", "2011", "2012") 
 
 highest_avg_per_yr <- function(year_filter) {
   data <- highest_avg_per_type %>%   # filter by each year, successively
-    filter(trans_date == year_filter) 
+    filter(trans_date == year_filter) %>%
+    mutate(na.omit(trans_date)) %>%
+    filter(entity_type != "")
   
   plot_try <- ggplot(data, aes(x=entity_type, y=avg_trans)) + 
     geom_point(aes(color=state)) +
-    ggtitle(year_filter)
+    ggtitle("State with the Highest Average Contribution", year_filter) +
+    xlab("Type of Contribution") +
+    ylab("Average Contribution")
   
 }
 
@@ -73,3 +76,179 @@ lapply(years_4plots, FUN = highest_avg_per_yr)
 
 
 ```
+
+
+
+
+number of candidates per party affiliation per year of election in each state
+
+```{r}
+my_candidates <- candidates %>%
+  filter(cand_party_affiliation == "DEM" | cand_party_affiliation == "REP" | cand_party_affiliation == "IND") %>%
+  group_by(cand_party_affiliation, cand_election_yr, cand_state) %>%
+  mutate(total_per_party = n()) %>%
+  select(cand_name, cand_party_affiliation, cand_election_yr, cand_ici, cand_status, cand_state, total_per_party)
+
+
+my_candidates
+
+states <- unique(my_candidates$cand_state)
+years <- unique(my_candidates$cand_election_yr)
+
+cands_per_state <- function(state_filter) {
+  data <- my_candidates %>%
+    filter(cand_state == state_filter) 
+  
+  ggplot(data, aes(x=cand_election_yr, y=total_per_party)) +
+  geom_text(aes(label=cand_party_affiliation, color = cand_ici)) +
+    ggtitle(state_filter)
+
+}
+
+lapply(states[1:5], FUN = cands_per_state)
+```
+
+try to join with my_candidates using 'name of candidate'
+```{r}
+names(house_elections)
+
+names(my_candidates)
+
+my_house <- house_elections %>%
+  mutate(candidate_name = toupper(candidate_name))
+
+dim(my_house) # 2178  10
+dim(my_candidates) # 4750  7
+
+
+# join so that all candidates still in the table 
+# are those who were in the house election 
+join_house_cand <- my_candidates %>%
+  left_join(my_house, by = c("cand_name" = "candidate_name", "cand_state" = "state")) %>%
+  na.omit()
+  
+
+dim(join_house_cand) # 545  16
+```
+
+now i can try to do the graph from above but with the winner listed too
+```{r}
+names(join_house_cand)
+
+mini_join <- join_house_cand %>%
+  filter(cand_state != "") %>%
+  group_by(cand_party_affiliation, cand_election_yr, cand_state) %>%
+  mutate(total_per_party = n()) %>%
+  select(1:7, 10:15) 
+
+mini_join_states <- unique(mini_join$cand_state)
+mini_join
+
+mini_join_function <- function(state_filter) {
+  data <- mini_join %>%
+    filter(cand_state == state_filter) 
+  
+  ggplot(data, aes(x=cand_election_yr, y=total_per_party)) +
+  geom_text(aes(label=cand_party_affiliation, color = cand_ici)) +
+    ggtitle(state_filter)
+}
+
+lapply(mini_join_states[1:5], FUN = mini_join_function)
+
+mini_join_winners <- mini_join %>%
+  filter(ge_winner == "W")
+
+ggplot(mini_join_winners, aes(x=cand_state, y=total_per_party)) +
+  geom_text(aes(label=cand_party_affiliation, color=cand_ici), size = 1)
+
+```
+
+TRYING CONTRIBUTION STUFF
+```{r}
+first5names <- my_candidates$cand_name[1:5]
+
+toupper(first5names)
+
+
+contributions
+
+candidate_names <- unique(my_candidates$cand_name)
+candidate_names
+
+filter_by_name <- function(name_filter) {
+  contributions %>%
+    filter(grepl(name_filter, contributions$name, ignore.case=TRUE))
+}
+
+lapply(candidate_names[1:5], FUN=filter_by_name)
+
+mini_contr
+
+```
+
+
+Isolate the top 5 most popular politicians by voter turnout or somehting like it
+```{r}
+mini_house <- house_elections %>%
+  filter(ge_winner == 'W' & state != "" & incumbent == 'TRUE')
+  
+
+mini_house
+
+house_states <- unique(mini_house$state)
+
+per_state_winners <- function(state_filter) {
+  data <- mini_house %>%
+    filter(state == state_filter) 
+  
+  ggplot(data, aes(x=party)) +
+    geom_bar(aes(color=party)) + 
+    ggtitle(state_filter)
+}
+
+lapply(house_states[1:5], FUN = per_state_winners)
+
+```
+
+
+```{r}
+cand_contr <- contributions %>%
+  filter(state != "" & entity_type != "" & transaction_type != "") %>%
+  group_by(state, entity_type, transaction_type) %>%
+  summarize(total_cont = sum(transaction_amt)) %>%
+  group_by(state, transaction_type) %>%
+  mutate(max_cont = max(total_cont)) %>%
+  filter(total_cont == max_cont)
+
+
+cand_contr
+names(contributions)
+
+contributions
+types <- unique(contributions$transaction_type)
+
+
+graph_per_entity <- function(transaction_filter) {
+  data <- cand_contr %>%
+    filter(transaction_type == transaction_filter) 
+
+ggplot(data, aes(x=state, y=total_cont)) +
+  geom_point(aes(color=entity_type)) +
+  ggtitle(transaction_filter) 
+}
+
+lapply(types, FUN = graph_per_entity)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

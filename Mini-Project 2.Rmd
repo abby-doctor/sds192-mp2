@@ -7,43 +7,78 @@ output: html_document
 ##Loading the files
 ```{r}
 library(dplyr)
+library(plyr)
 load("house_elections.rda")
 load("candidates.rda")
 load("committees.rda")
 load("contributions.rda")
 library(ggplot2)
-```
-```{r}
-
+require(treemap)
 ```
 
-##Maybe what percentage of incumbents win a second election? Does that vary by state
-
+##Number of incumbents who won House positions, number of new runners (for each state)
 ```{r}
-g1 <- house_elections %>% filter(ge_winner == "W") %>% group_by(incumbent)%>% group_by(state)
+g1 <- house_elections %>% filter(ge_winner == "W", cand_office == "H") %>% group_by(incumbent)%>% group_by(state)
 ggplot(g1, aes(x = state)) +geom_bar(aes(fill = incumbent))
 ```
 
-##Margin of Victory: House Elections Margin of Victory, combine with amount of contribution to candidate
-So far I have total transaction amounts by party (how to divide by years?)
+##Contribution Amounts for each party broken down by year
+So far I have total transaction amounts by party
 ```{r}
-f2 <- contributions %>% inner_join(candidates, by = "cand_id", na.rm = FALSE) %>% filter(state == "NY") %>% arrange(by = cand_party_affiliation)
+##
+f2 <- contributions %>% inner_join(candidates, by = "cand_id", na.rm = FALSE) %>% arrange(by = cand_party_affiliation)
 
-ggplot(f2, aes(x= cand_election_yr, y = sum(transaction_amt)))+geom_bar(stat = "identity", aes(color = cand_party_affiliation))
-
+ggplot(f2, aes(x = cand_state, y = sum(transaction_amt))) + geom_bar(stat = "identity", aes(fill = cand_party_affiliation))
 ```
 
 ##Making a Big Data Collection house_elections, candidates
+Candidate elections include the names, states, incumbency status, party, number of votes (general), winner status and office
 ```{r}
+##renaming columns in candidates in order to combine candidates and house_elections
 candidates <- rename(candidates, c("cand_state" = "state", "cand_name" = "candidate_name", "cand_election_yr" = "year"))
-house_elections <- house_elections %>% mutate_each(funs(toupper)) house_elections$general_votes <- as.numeric(house_elections$general_votes)
+
+##mutating the chr of house_elections to merge candidates and house_elections by candidate names
+house_elections <- house_elections %>% mutate_each(funs(toupper))
+
+##converting chr value house_elections$general_votes to int values
+house_elections$general_votes <- as.numeric(house_elections$general_votes)
+
+##inner_join candidate elections
 cand_elections <- candidates %>% inner_join(house_elections, by  = c("candidate_name", "state"), na.rm = FALSE)
+
+##cutting cand_elections down to include only necessary columns
 cand_elections <- cand_elections %>% select(candidate_name, year, state, incumbent, party, general_votes, ge_winner, cand_office)
+```
+
+##Let's look at Arizona House Elections?
+```{r}
+##Arizona treemap
+ariz_cand_elec <- cand_elections %>% filter(state == "AZ", cand_office == "H") %>% mutate(prop_votes = general_votes/sum(general_votes))
+treemap(ariz_cand_elec, index = c("party", "candidate_name"), vSize = "general_votes", vColor = c("party", "incumbent"))
+```
+
+
+##Function by State
+```{r}
+##function that generates a tree graph with a breakdown of candidates and party and number ofvotes in the general election
+percentage_breakdown <- function(this_state) {
+  g4 <- cand_elections %>% filter(state == this_state, cand_office == "H")
+  treemap(g4, index =  c("party", "candidate_name"), vSize = "general_votes", vColor = c("party", "incumbent"))
+}
+
+##A few examples
+percentage_breakdown(this_state = "IA")
+percentage_breakdown(this_state = "GA")
+percentage_breakdown(this_state = "FL")
+percentage_breakdown(this_state = "CA")
+percentage_breakdown(this_state = "AZ")
+percentage_breakdown(this_state = "NY")
 ```
 
 
 ##Choosing an office
 ```{r}
+##breakdown of votes by party for each state
 house_values <- cand_elections %>% 
   filter(cand_office == "H") %>%
   arrange(by = party)

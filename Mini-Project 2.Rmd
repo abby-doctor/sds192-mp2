@@ -18,7 +18,7 @@ require(treemap)
 
 ##Number of incumbents who won House positions, number of new runners (for each state)
 ```{r}
-g1 <- house_elections %>% filter(ge_winner == "W", cand_office == "H") %>% group_by(incumbent)%>% group_by(state)
+g1 <- house_elections %>% filter(ge_winner == "W") %>% group_by(incumbent)%>% group_by(state)
 ggplot(g1, aes(x = state)) +geom_bar(aes(fill = incumbent))
 ```
 

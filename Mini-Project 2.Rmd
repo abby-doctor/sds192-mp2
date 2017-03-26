@@ -17,8 +17,9 @@ require(treemap)
 ```
 
 ##Number of incumbents who won House positions, number of new runners (for each state)
+This graphic shows the effects of incumbency on the election chances by breaking the house_elections data set to its winners, and by state showing how many election winners were incumbents.
 ```{r}
-g1 <- house_elections %>% filter(ge_winner == "W") %>% group_by(incumbent)%>% group_by(state)
+g1 <- house_elections %>% filter(ge_winner == "W", year  == "2012") %>% group_by(incumbent)%>% group_by(state)
 ggplot(g1, aes(x = state)) +geom_bar(aes(fill = incumbent))
 ```
 
@@ -50,7 +51,7 @@ cand_elections <- candidates %>% inner_join(house_elections, by  = c("candidate_
 cand_elections <- cand_elections %>% select(candidate_name, year, state, incumbent, party, general_votes, ge_winner, cand_office)
 ```
 
-##Let's look at Arizona House Elections?
+##Let's look at Arizona House Elections
 ```{r}
 ##Arizona treemap
 ariz_cand_elec <- cand_elections %>% filter(state == "AZ", cand_office == "H") %>% mutate(prop_votes = general_votes/sum(general_votes))
@@ -59,10 +60,11 @@ treemap(ariz_cand_elec, index = c("party", "candidate_name"), vSize = "general_v
 
 
 ##Function by State
+This function generates a tree graph with proportions showing the breakdown of votes by party and by candidates per state in the 2012 House election cycle. From this graphic you can see (for each state) how the votes were broken down.
 ```{r}
 ##function that generates a tree graph with a breakdown of candidates and party and number ofvotes in the general election
 percentage_breakdown <- function(this_state) {
-  g4 <- cand_elections %>% filter(state == this_state, cand_office == "H")
+  g4 <- cand_elections %>% filter(state == this_state, cand_office == "H", year == "2012")
   treemap(g4, index =  c("party", "candidate_name"), vSize = "general_votes", vColor = c("party", "incumbent"))
 }
 
@@ -78,14 +80,14 @@ percentage_breakdown(this_state = "NY")
 ```
 
 
-##Choosing an office
+##Examining the House Elections
+This graphic shows the distribution of votes by party in house elections, broken down by state. From these data it is possibly to see party dominance  by state in house elections and see also the total number of votes.
 ```{r}
 ##breakdown of votes by party for each state
 house_values <- cand_elections %>% 
-  filter(cand_office == "H") %>%
-  arrange(by = party) %>%
-  filter
-house_values
+  filter(cand_office == "H") %>% ## filters out senate and pres seats
+  arrange(by = party) %>% ## aranges the data by party
+  filter(year == "2012") ## filters to include only elections in 2012
 
 ggplot(house_values, aes(x = state, y = general_votes)) + geom_bar(stat = "identity", aes(fill = party))+ labs(x = "State", y = "Number of Votes (General)") + scale_y_continuous(labels = scales::comma)
 ```

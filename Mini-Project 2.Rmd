@@ -4,6 +4,11 @@ author: "Sarah Elghazoly, Abby Doctor"
 date: "3/10/2017"
 output: html_document
 ---
+Suggestions: turn states on their side on the x axis so they are visible
+Make my own color codes for party affiliation, maybe rename
+Value axes make in terms of thousands.
+
+
 ##Loading the files
 ```{r}
 library(dplyr)
@@ -22,13 +27,13 @@ g1 <- house_elections %>% filter(ge_winner == "W") %>% group_by(incumbent)%>% gr
 ggplot(g1, aes(x = state)) +geom_bar(aes(fill = incumbent))
 ```
 
-##Contribution Amounts for each party broken down by year
+##Contribution Amounts for Republican and Democratic parties broken down by year
 So far I have total transaction amounts by party
 ```{r}
 ##
-f2 <- contributions %>% inner_join(candidates, by = "cand_id", na.rm = FALSE) %>% arrange(by = cand_party_affiliation)
+f2 <- contributions %>% inner_join(candidates, by = "cand_id", na.rm = FALSE) %>% arrange(by = cand_party_affiliation) %>% filter(cand_party_affiliation ==  c("DEM", "REP"))
 
-ggplot(f2, aes(x = cand_state, y = sum(transaction_amt))) + geom_bar(stat = "identity", aes(fill = cand_party_affiliation))
+ggplot(f2, aes(x = cand_state, y = sum(transaction_amt))) + geom_bar(stat = "identity", aes(fill = cand_party_affiliation)) + labs(x = "State", y = "Sum of Contributions") + scale_y_continuous(labels = scales::comma)
 ```
 
 ##Making a Big Data Collection house_elections, candidates
@@ -81,9 +86,9 @@ percentage_breakdown(this_state = "NY")
 ##breakdown of votes by party for each state
 house_values <- cand_elections %>% 
   filter(cand_office == "H") %>%
-  arrange(by = party)
+  arrange(by = party) %>%
+  filter
 house_values
 
-ggplot(house_values, aes(x = state, y = general_votes)) + geom_bar(stat = "identity", aes(fill = party))
+ggplot(house_values, aes(x = state, y = general_votes)) + geom_bar(stat = "identity", aes(fill = party))+ labs(x = "State", y = "Number of Votes (General)") + scale_y_continuous(labels = scales::comma)
 ```
-

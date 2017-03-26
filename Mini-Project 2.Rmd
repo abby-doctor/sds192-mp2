@@ -4,11 +4,6 @@ author: "Sarah Elghazoly, Abby Doctor"
 date: "3/10/2017"
 output: html_document
 ---
-Suggestions: turn states on their side on the x axis so they are visible
-Make my own color codes for party affiliation, maybe rename
-Value axes make in terms of thousands.
-
-
 ##Loading the files
 ```{r}
 library(dplyr)
